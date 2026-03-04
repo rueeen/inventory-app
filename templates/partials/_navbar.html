@@ -4,6 +4,11 @@
   {% if user.is_authenticated %}
     <a href="{% url 'inventory:create_movement' %}">Nuevo movimiento</a>
 
+    {% if user.is_staff %}
+      <a href="{% url 'inventory:create_product' %}">Agregar producto</a>
+      <a href="{% url 'inventory:import_inventory' %}">Importar</a>
+    {% endif %}
+
     <span style="margin-left:auto;">
       Usuario: <strong>{{ user.username }}</strong>
       {% if active_career %} | Carrera activa: <strong>{{ active_career.name }}</strong>{% endif %}

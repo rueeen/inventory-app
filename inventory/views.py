@@ -1,19 +1,28 @@
-from django.shortcuts import get_object_or_404
-from .models import Career
 from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
-from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .forms import StockMovementForm
-from .models import InventoryItem
+from .forms import InventoryImportForm, ProductForm, StockMovementForm
+from .importers import import_inventory_from_excel
+from .models import Career, InventoryItem
 from .services import apply_stock_movement
+
+
+class StaffRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def handle_no_permission(self):
+        messages.error(self.request, "No tienes permisos para acceder a esta sección.")
+        return redirect("inventory:dashboard")
 
 
 class DashboardView(LoginRequiredMixin, View):
     def get(self, request):
-        items = InventoryItem.objects.select_related(
-            "product", "warehouse").order_by("product__sku", "warehouse__name")
+        items = InventoryItem.objects.select_related("product", "warehouse").order_by(
+            "product__sku", "warehouse__name"
+        )
         return render(request, "inventory/dashboard.html", {"items": items})
 
 
@@ -26,25 +35,63 @@ class CreateMovementView(LoginRequiredMixin, View):
         form = StockMovementForm(request.POST)
         if form.is_valid():
             try:
-                movement, item = apply_stock_movement(
+                _, item = apply_stock_movement(
                     product=form.cleaned_data["product"],
                     warehouse=form.cleaned_data["warehouse"],
                     movement_type=form.cleaned_data["movement_type"],
                     quantity=form.cleaned_data["quantity"],
                     reason=form.cleaned_data.get("reason", ""),
                 )
-                messages.success(
-                    request, f"Movimiento registrado. Stock actual: {item.quantity}")
+                messages.success(request, f"Movimiento registrado. Stock actual: {item.quantity}")
                 return redirect("inventory:dashboard")
-            except Exception as e:
-                messages.error(request, str(e))
+            except Exception as exc:  # noqa: BLE001
+                messages.error(request, str(exc))
         return render(request, "inventory/create_movement.html", {"form": form})
+
+
+class CreateProductView(LoginRequiredMixin, StaffRequiredMixin, View):
+    def get(self, request):
+        return render(request, "inventory/create_product.html", {"form": ProductForm()})
+
+    def post(self, request):
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            product = form.save()
+            messages.success(request, f"Producto {product.sku} creado correctamente.")
+            return redirect("inventory:dashboard")
+        return render(request, "inventory/create_product.html", {"form": form})
+
+
+class ImportInventoryView(LoginRequiredMixin, StaffRequiredMixin, View):
+    def get(self, request):
+        return render(request, "inventory/import_inventory.html", {"form": InventoryImportForm()})
+
+    def post(self, request):
+        form = InventoryImportForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return render(request, "inventory/import_inventory.html", {"form": form})
+
+        summary = import_inventory_from_excel(form.cleaned_data["file"])
+        messages.success(request, "Importación finalizada.")
+        if summary["errors"]:
+            messages.warning(request, f"La importación terminó con {len(summary['errors'])} advertencias.")
+
+        return render(
+            request,
+            "inventory/import_inventory.html",
+            {
+                "form": InventoryImportForm(),
+                "summary": summary,
+            },
+        )
 
 
 class SetActiveCareerView(LoginRequiredMixin, View):
     def get(self, request, career_id):
-        c = get_object_or_404(Career, id=career_id)
-        # Solo permitir carreras asignadas (o staff)
-        if request.user.is_staff or request.user.userprofile.careers.filter(id=c.id).exists():
-            request.session["active_career_id"] = c.id
+        career = get_object_or_404(Career, id=career_id)
+        profile = getattr(request.user, "userprofile", None)
+
+        if request.user.is_staff or (profile and profile.careers.filter(id=career.id).exists()):
+            request.session["active_career_id"] = career.id
+
         return redirect("inventory:dashboard")
