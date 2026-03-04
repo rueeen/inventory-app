@@ -3,10 +3,19 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
-from .forms import InventoryImportForm, StockMovementForm
+from .forms import InventoryImportForm, ProductForm, StockMovementForm
 from .importers import import_inventory_from_excel
 from .models import Career, InventoryItem
 from .services import apply_stock_movement
+
+
+class StaffRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def handle_no_permission(self):
+        messages.error(self.request, "No tienes permisos para acceder a esta sección.")
+        return redirect("inventory:dashboard")
 
 
 class DashboardView(LoginRequiredMixin, View):
@@ -40,14 +49,20 @@ class CreateMovementView(LoginRequiredMixin, View):
         return render(request, "inventory/create_movement.html", {"form": form})
 
 
-class ImportInventoryView(LoginRequiredMixin, UserPassesTestMixin, View):
-    def test_func(self):
-        return self.request.user.is_staff
+class CreateProductView(LoginRequiredMixin, StaffRequiredMixin, View):
+    def get(self, request):
+        return render(request, "inventory/create_product.html", {"form": ProductForm()})
 
-    def handle_no_permission(self):
-        messages.error(self.request, "No tienes permisos para importar inventario.")
-        return redirect("inventory:dashboard")
+    def post(self, request):
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            product = form.save()
+            messages.success(request, f"Producto {product.sku} creado correctamente.")
+            return redirect("inventory:dashboard")
+        return render(request, "inventory/create_product.html", {"form": form})
 
+
+class ImportInventoryView(LoginRequiredMixin, StaffRequiredMixin, View):
     def get(self, request):
         return render(request, "inventory/import_inventory.html", {"form": InventoryImportForm()})
 

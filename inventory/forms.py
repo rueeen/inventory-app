@@ -19,6 +19,24 @@ class StockMovementForm(forms.Form):
         return quantity
 
 
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            "sku",
+            "name",
+            "item_type",
+            "category",
+            "supplier",
+            "technical_spec",
+            "unit",
+            "unit_value_uf",
+            "min_stock",
+            "active",
+            "observations",
+        ]
+
+
 class InventoryImportForm(forms.Form):
     file = forms.FileField(
         label="Archivo Excel (.xlsx)",
