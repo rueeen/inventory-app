@@ -1,0 +1,26 @@
+<nav style="display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid #ddd;">
+  <a href="{% url 'inventory:dashboard' %}">Inicio</a>
+
+  {% if user.is_authenticated %}
+    <a href="{% url 'inventory:create_movement' %}">Nuevo movimiento</a>
+
+    <span style="margin-left:auto;">
+      Usuario: <strong>{{ user.username }}</strong>
+      {% if active_career %} | Carrera activa: <strong>{{ active_career.name }}</strong>{% endif %}
+      | <a href="{% url 'logout' %}">Salir</a>
+    </span>
+  {% else %}
+    <span style="margin-left:auto;">
+      <a href="{% url 'login' %}">Ingresar</a>
+    </span>
+  {% endif %}
+</nav>
+
+{% if user.is_authenticated and user_careers %}
+  <div style="padding: 8px 16px; border-bottom:1px solid #eee;">
+    Cambiar carrera:
+    {% for c in user_careers %}
+      <a style="margin-right:10px;" href="{% url 'inventory:set_active_career' c.id %}">{{ c.name }}</a>
+    {% endfor %}
+  </div>
+{% endif %}

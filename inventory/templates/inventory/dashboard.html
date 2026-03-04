@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Inventario{% endblock %}
+
+{% block content %}
+<h1>Inventario</h1>
+
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>SKU/Código</th><th>Producto</th><th>Bodega</th><th>Stock</th><th>Necesario</th><th>Brecha</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in items %}
+      <tr>
+        <td>{{ it.product.sku }}</td>
+        <td>{{ it.product.name }}</td>
+        <td>{{ it.warehouse.name }}</td>
+        <td>{{ it.quantity }}</td>
+        <td>{{ it.needed_quantity }}</td>
+        <td>{{ it.gap }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">Sin registros.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

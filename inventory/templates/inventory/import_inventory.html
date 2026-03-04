@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Importar Inventario{% endblock %}
+
+{% block content %}
+<h1>Importar inventario (Excel)</h1>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Importar</button>
+</form>
+
+{% if summary %}
+  <hr/>
+  <h2>Resumen</h2>
+  <ul>
+    <li>Filas procesadas: {{ summary.rows_processed }}</li>
+    <li>Productos creados: {{ summary.products_created }}</li>
+    <li>Productos actualizados: {{ summary.products_updated }}</li>
+    <li>Items creados: {{ summary.items_created }}</li>
+    <li>Items actualizados: {{ summary.items_updated }}</li>
+  </ul>
+
+  {% if summary.errors %}
+    <h3>Errores</h3>
+    <ul>
+      {% for e in summary.errors %}
+        <li>{{ e }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endif %}
+{% endblock %}

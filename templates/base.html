@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Inventario{% endblock %}</title>
+</head>
+<body>
+  {% include "partials/_navbar.html" %}
+
+  <main style="max-width: 1100px; margin: 0 auto; padding: 16px;">
+    {% if messages %}
+      <ul>
+        {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
